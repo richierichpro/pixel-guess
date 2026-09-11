@@ -468,8 +468,8 @@ function guessBox(inputValue: string) {
           color={Color4.create(0.2, 0.24, 0.32, 1)}
           uiTransform={{ width: gp, height: 42, margin: { top: 10 } }}
           uiBackground={{ color: Color4.create(0.2, 0.24, 0.32, 1) }}
-          onChange={(v) => (typed = v)}
-          onSubmit={(v) => tryGuess(v || typed)}
+          onChange={(v) => (typed = v.slice(0, word.length))} // never allow more letters than the word has
+          onSubmit={(v) => tryGuess((v || typed).slice(0, word.length))}
         />
         {feedback ? <Label value={feedback} fontSize={12} color={Color4.create(0.95, 0.6, 0.3, 1)} uiTransform={{ width: '100%', height: 18, margin: { top: 4 } }} /> : null}
         <UiEntity uiTransform={{ flexDirection: 'row', margin: { top: 12 } }}>

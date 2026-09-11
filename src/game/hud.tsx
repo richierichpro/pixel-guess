@@ -65,33 +65,29 @@ const redoStack: number[][] = []
 
 let frozen = false
 
-/** Simple, predictable typing feedback: the character you type Nth always
- * fills dash position N, one-to-one — no skipping over revealed positions,
- * no hidden rules. Revealed hints are shown entirely separately (see
- * `hintRow`) so typing never "jumps" or gets overwritten by a hint. You type
- * the whole word yourself, hint included if you choose to use it — SUBMIT
- * just checks what you actually typed against the real word, no merging. */
-function typedDashes(word: string): string {
-  if (!word) return ''
-  let out = ''
+const LETTER_BOX_W = 34
+
+/** One fixed-width box PER LETTER POSITION, typed letter on top and the
+ * host's revealed hint (if any) directly below it, in the SAME column. A
+ * spaced-out text string can't guarantee a hint lines up under the right
+ * dash — the font isn't monospaced, so letter widths and space widths
+ * differ, and two separately-centered text rows just happen to line up by
+ * luck (or don't). A real per-position box grid can't misalign, since both
+ * rows share the exact same fixed-width column regardless of what's in it.
+ * Typing is always simple 1-to-1 (character N fills position N, no
+ * skipping) — the hint below never affects it or SUBMIT's correctness check. */
+function letterBoxes(word: string, revealed: readonly boolean[]) {
+  const cols = []
   for (let i = 0; i < word.length; i++) {
     const t = typed[i]
-    out += t ? t.toUpperCase() : '_'
-    if (i < word.length - 1) out += '   '
+    cols.push(
+      <UiEntity key={i} uiTransform={{ width: LETTER_BOX_W, flexDirection: 'column', alignItems: 'center' }}>
+        <Label value={t ? t.toUpperCase() : '_'} fontSize={26} textAlign="middle-center" color={Color4.Black()} uiTransform={{ width: LETTER_BOX_W, height: 34 }} />
+        <Label value={revealed[i] ? word[i].toUpperCase() : ''} fontSize={16} textAlign="middle-center" color={Color4.create(0.15, 0.35, 0.15, 1)} uiTransform={{ width: LETTER_BOX_W, height: 22, margin: { top: 2 } }} />
+      </UiEntity>
+    )
   }
-  return out
-}
-
-/** The host's revealed hint letters, one row under the dashes — purely a
- * reference. Doesn't affect what you type or how SUBMIT is checked. */
-function hintRow(word: string, revealed: readonly boolean[]): string {
-  if (!word) return ''
-  let out = ''
-  for (let i = 0; i < word.length; i++) {
-    out += revealed[i] ? word[i].toUpperCase() : ' '
-    if (i < word.length - 1) out += '   '
-  }
-  return out
+  return cols
 }
 
 /** The multiplayer game's screen UI. Mounted by the root renderer in ui.tsx. */
@@ -567,12 +563,9 @@ function canvasOverlay(st: ReturnType<typeof state>) {
   // leftover choosing-phase countdown (which is still what st.phase reflects).
   const waitingOnSync = !ro && st.phase !== Phase.Drawing && myPickedWord !== ''
   const secs = waitingOnSync ? Math.ceil(DRAW_MS / 1000) : Math.ceil(remainingMs() / 1000)
-  // The guesser's dash display space-separates every letter ("_ _ _ _ _ _"),
-  // which is roughly TWICE as wide per letter as the drawer's own compact
-  // word ("CHAIR", no gaps) — a fixed box sized for the drawer's case was too
-  // narrow for longer words' dashes, causing them to overlap into what
-  // looked like a solid black bar instead of visible dashes.
-  const headerW = ro ? Math.max(360, st.word.length * 46) : 320
+  // The guesser's display is a fixed-width box PER LETTER (see letterBoxes),
+  // so the total width is just letter count × box width.
+  const headerW = ro ? Math.max(LETTER_BOX_W * 6, st.word.length * LETTER_BOX_W) : 320
   const cells = grid().cells
   const empty = cells.every((v) => (v ?? 0) === 0)
 
@@ -695,15 +688,13 @@ function canvasOverlay(st: ReturnType<typeof state>) {
       <UiEntity
         uiTransform={{ positionType: 'absolute', position: { left: '50%', top: 45 }, margin: { left: -headerW / 2 }, width: headerW, height: 70, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start' }}
       >
-        <UiEntity uiTransform={{ flexDirection: 'column', width: headerW, alignItems: 'center' }}>
-          <Label value={ro ? typedDashes(st.word) : (st.word || myPickedWord).toUpperCase()} fontSize={26} textAlign="middle-center" color={Color4.Black()} uiTransform={{ width: headerW, height: 34 }} />
-          {/* Revealed hints — a separate row under the dashes, purely a
-          reference. Typing is always a simple 1-to-1 fill above; this never
-          affects it. */}
-          {ro ? (
-            <Label value={hintRow(st.word, st.revealed)} fontSize={18} textAlign="middle-center" color={Color4.create(0.15, 0.35, 0.15, 1)} uiTransform={{ width: headerW, height: 24, margin: { top: 4 } }} />
-          ) : null}
-        </UiEntity>
+        {ro ? (
+          <UiEntity uiTransform={{ flexDirection: 'row', width: headerW, justifyContent: 'center' }}>{letterBoxes(st.word, st.revealed)}</UiEntity>
+        ) : (
+          <UiEntity uiTransform={{ flexDirection: 'column', width: headerW, alignItems: 'center' }}>
+            <Label value={(st.word || myPickedWord).toUpperCase()} fontSize={26} textAlign="middle-center" color={Color4.Black()} uiTransform={{ width: headerW, height: 34 }} />
+          </UiEntity>
+        )}
       </UiEntity>
 
       {/* DONE/BACK — bottom of the screen, not glued to the very edge. */}
@@ -761,9 +752,9 @@ function canvasOverlay(st: ReturnType<typeof state>) {
                 color={Color4.create(0.22, 0.26, 0.34, 1)}
                 uiTransform={{ width: gp, height: 40, borderWidth: 2, borderColor: GOLD, borderRadius: 6 }}
                 uiBackground={{ color: Color4.create(0.22, 0.26, 0.34, 1) }}
-                onChange={(v) => (typed = v)}
+                onChange={(v) => (typed = v.slice(0, st.word.length))} // never allow more letters than the word has
                 onSubmit={(v) => {
-                  submitGuess(v || typed)
+                  submitGuess((v || typed).slice(0, st.word.length))
                   typed = ''
                   clearFlash = true
                 }}
@@ -776,7 +767,7 @@ function canvasOverlay(st: ReturnType<typeof state>) {
                 uiBackground={{ color: Color4.create(0.2, 0.5, 0.32, 1) }}
                 onMouseDown={() => {
                   play('click')
-                  submitGuess(typed)
+                  submitGuess(typed.slice(0, st.word.length))
                   typed = ''
                   clearFlash = true
                 }}
