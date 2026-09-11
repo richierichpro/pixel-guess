@@ -1,0 +1,80 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Pixel Guess",
+    "description": "Draw and guess pixel-art words with friends, or go solo and race the clock in a gallery of player-made drawings.",
+    "favicon": "favicon_asset",
+    "navmapThumbnail": "assets/images/ChatGPT_Image_Sep_11,_2026,_06_51_22_PM.png"
+  },
+  "owner": "",
+  "contact": {
+    "name": "SDK",
+    "email": ""
+  },
+  "main": "bin/index.js",
+  "tags": [
+    "game",
+    "art",
+    "social"
+  ],
+  "scene": {
+    "base": "0,0",
+    "parcels": [
+      "0,0",
+      "0,1",
+      "0,2",
+      "1,0",
+      "1,1",
+      "1,2",
+      "2,0",
+      "2,1",
+      "2,2"
+    ]
+  },
+  "spawnPoints": [
+    {
+      "name": "SpawnArea1",
+      "default": true,
+      "position": {
+        "x": [
+          22,
+          26
+        ],
+        "y": [
+          0,
+          0
+        ],
+        "z": [
+          22,
+          26
+        ]
+      },
+      "cameraTarget": {
+        "x": 24,
+        "y": 1,
+        "z": 30
+      }
+    }
+  ],
+  "requiredPermissions": [
+    "ALLOW_TO_TRIGGER_AVATAR_EMOTE",
+    "ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE",
+    "USE_FETCH"
+  ],
+  "featureToggles": {
+    "voiceChat": "enabled",
+    "portableExperiences": "enabled",
+    "nearbyVoiceChat": "enabled"
+  },
+  "creator": "",
+  "skyboxConfig": {},
+  "landscapeTerrain": true,
+  "worldConfiguration": {
+    "name": "mindset.dcl.eth"
+  },
+  "source": {
+    "origin": "creator-hub",
+    "projectId": "85e003d6-2185-4bc5-a8b0-66996acfefb8"
+  }
+}
